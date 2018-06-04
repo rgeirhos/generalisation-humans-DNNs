@@ -17,7 +17,8 @@ sys.path.append('../../code')
 from image_manipulation import (high_pass_filter, low_pass_filter,
                                 phase_scrambling, salt_and_pepper_noise,
                                 false_colour, power_equalisation,
-                                grayscale_contrast, uniform_noise)
+                                grayscale_contrast, uniform_noise,
+                                eidolon_partially_coherent_disarray)
 
 
 """Functionality to plot stimuli at a certain level of manipulation."""
@@ -37,7 +38,8 @@ def plot_stimuli_all_conditions(imglist, stimulus_levels,
                                 ylabel=None, filename=None,
                                 thresholds=None, set_vmin_vmax=True,
                                 rotate_angle=0,
-                                reduced_space=False):
+                                reduced_space=False,
+                                is_eidolon=False):
     """Plot a nxm matrix of n stimulus_levels for m images.
 
     parameters:
@@ -63,17 +65,10 @@ def plot_stimuli_all_conditions(imglist, stimulus_levels,
         if len(stimulus_levels) is len(thresholds):
             offset = 0.3 # add some more vspace
 
-    if True:#reduced_space:
-        fig = plt.figure(figsize=(-0.2+2*len(imglist),len(stimulus_levels)*1.6+offset)) #-0.4))
-        fig.subplots_adjust(top=0.98, bottom=0.02,
-                            right=0.93, left=0.09,
-                            hspace=0.05)
-    else:
-        fig = plt.figure(figsize=(0.4+2*len(imglist),len(stimulus_levels)*1.6+offset))
-        fig.subplots_adjust(top=0.98, bottom=0.02,
-                            right=0.93, left=0.09,
-                            hspace=0.05)
-
+    fig = plt.figure(figsize=(-0.2+2*len(imglist),len(stimulus_levels)*1.6+offset))
+    fig.subplots_adjust(top=0.98, bottom=0.02,
+                        right=0.93, left=0.09,
+                        hspace=0.05)
 
     counter = 0
 
@@ -89,17 +84,22 @@ def plot_stimuli_all_conditions(imglist, stimulus_levels,
     for stimulus_counter, s in enumerate(stimulus_levels):
         for i, img in enumerate(imglist):
             subplot = fig.add_subplot(num_stimuli,num_imgs, counter+1)
-            img = img_manip_func(img, s)
-            img = ndimage.rotate(img, rotate_angle)
-            # clip to 0..1 range
-            assert np.allclose(img[img < 0], 0) and np.allclose(img[img > 1], 1)
-            img[img < 0] = 0
-            img[img > 1] = 1
-            #print(img.min(), img.mean(), img.max())
+            
+            
+            ######break inserted here
+            
+            if not is_eidolon:
+                # clip to 0..1 range
+                assert np.allclose(img[img < 0], 0) and np.allclose(img[img > 1], 1)
+                img[img < 0] = 0
+                img[img > 1] = 1
+                
             if set_vmin_vmax:
-                plt.imshow(img, cmap="gray", vmin=0.0, vmax=1.0)
+                plt.imshow(ndimage.rotate(img_manip_func(img, s), rotate_angle),
+                       cmap="gray", vmin=0.0, vmax=1.0)
             else:
-                plt.imshow(img, cmap="gray")
+                plt.imshow(ndimage.rotate(img_manip_func(img, s), rotate_angle),
+                       cmap="gray")
             subplot.get_yaxis().set_ticks([])
             subplot.get_xaxis().set_ticks([])
 
@@ -119,14 +119,12 @@ def plot_stimuli_all_conditions(imglist, stimulus_levels,
         ylabel = ""
     fig.text(0.01, 0.5, ylabel, va='center', rotation='vertical', fontsize=12)#, fontsize=16)
 
-    #fig.tight_layout()
+    #fig.tight_layout() 
     #plt.show()
     if filename is None:
         plt.show()    
     else:
         plt.savefig(filename)
-  
-
 
 
 def main(number):
@@ -139,6 +137,11 @@ def main(number):
     im1 = rgb2grey(im1_col)
     im2 = rgb2grey(im2_col)
     im3 = rgb2grey(im3_col)
+
+    im1_gray = imread("../randomly_selected_imgs/random_bicycle.JPEG")
+    im2_gray = imread("../randomly_selected_imgs/random_dog.JPEG")
+    im3_gray = imread("../randomly_selected_imgs/random_keyboard.JPEG")
+
 
     # import npy files
     x_gamma_function = np.load('../../code/x_gamma_function.npy')
@@ -157,7 +160,7 @@ def main(number):
                                     u_noise,
                                     labels_to_int=False,
                                     ylabel= "Uniform noise width",
-                                    filename="../../figures/methods/test-noise_all-conditions.png")
+                                    filename="../../figures/methods/noise_all-conditions.png")
 
 
 
@@ -171,31 +174,27 @@ def main(number):
                                     labels_to_int=True,
                                     multiply_labels_by=100,
                                     ylabel= "Contrast level in percent",
-                                    filename="../../figures/methods/test-contrast_all-conditions.png")
+                                    filename="../../figures/methods/contrast_all-conditions.png")
 
     if number is 3: # Eidolon experiments
-
-        # TODO import missing. needs to be tested (on old laptop). Fix paths there as well (PYTHONPATH)
         
-        rain = 10.0
+        grain = 10.0
         coherence_levels = [0.0, 0.3, 1.0]
         coh_in_filename = ["00", "03", "10"]
         reach_levels = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0]
 
         for i, c in enumerate(coherence_levels):
 
-            eidolon_function = lambda i, reach: hd.eido.on_partially_coherent_disarray(i, reach, c, grain)
+            eidolon_function = lambda i, reach: eidolon_partially_coherent_disarray(i, reach, c, grain)
 
 
-            plot_stimuli_all_conditions([im1, im2, im3],
-                                        contrast_levels,
-                                        grayscale_contrast,
-                                        labels_to_int=True,
-                                        multiply_labels_by=100,
-                                        ylabel= "Contrast level in percent",
-                                        filename=("../../figures/methods/test_eidolon_coh="+
+            plot_stimuli_all_conditions([im1_gray, im2_gray, im3_gray],
+                                        reach_levels,
+                                        eidolon_function,
+                                        ylabel= "Reach level",
+                                        filename=("../../figures/methods/eidolon_coh="+
                                                   coh_in_filename[i]+"_all-conditions.png"),
-                                        thresholds = None, set_vmin_vmax = False)
+                                        thresholds=None, set_vmin_vmax=False, is_eidolon=True)
 
 
 
@@ -264,7 +263,7 @@ def main(number):
                                     standard_deviations,
                                     phase_scrambling,
                                     labels_to_int=True,
-                                    ylabel= "Phase noise width [°]",
+                                    ylabel= "Phase noise width [deg]",
                                     filename="../../figures/methods/phase-noise_all-conditions_paper.png",
                                     reduced_space = False)
 
@@ -291,6 +290,12 @@ def main(number):
 
 if __name__ == "__main__":
 
-    #for number in [1,2,3,4,5,6,7,8,9]:
-    for number in [3]:
-        main(number)
+    # non-Eidolon stimuli: uncomment and execute with Python 3.5
+    #for number in [1,2,4,5,6,7,8,9]:
+    #    main(number)
+        
+    # eidolon stimuli: uncomment and execute with Python 2.7
+    #for number in [3]:
+    #    main(number)
+    
+    print("Please choose between plotting Eidolon stimuli (Python 2.7) and other stimuli (Python 3.5) by uncommenting the respective functions in the main method.")
