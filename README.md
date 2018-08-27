@@ -1,14 +1,13 @@
 # Data and materials from <br>"Generalisation in humans and deep neural networks"
 
-[![DOI](https://zenodo.org/badge/91843628.svg)](https://zenodo.org/badge/latestdoi/91843628)
-
-This repository contains information, data and materials from the paper "Generalisation in humans and deep neural networks" by Robert Geirhos, Carlos R. Medina Temme, Jonas Rauber, Heiko H. Schütt, Matthias Bethge, and Felix A. Wichmann.
-
-A subset of the experiments described here reported in an earlier version posted on arXiv ("Comparing deep neural networks against humans: object recognition when the signal gets weaker", Geirhos et al., June 2017). In the more recent paper, we extend our previous work by additional image manipulations (now 83K instead of 40K psychophysical trials), more recent networks (ResNet instead of AlexNet) plus extensive results for testing generalisation performance of networks trained directly on distortions.
+This repository contains information, data and materials from the paper "Generalisation in humans and deep neural networks" by Robert Geirhos, Carlos R. Medina Temme, Jonas Rauber, Heiko H. Schütt, Matthias Bethge, and Felix A. Wichmann. We hope that you may find this repository a useful resource for your own research.
 
 Please don't hesitate to contact me at robert.geirhos@bethgelab.org or open an issue in case there is any question!
 
 This README is structured according to the repo's structure: one section per subdirectory (alphabetically).
+
+A subset of the experiments described here were reported in an earlier version posted on arXiv ("Comparing deep neural networks against humans: object recognition when the signal gets weaker", Geirhos et al., June 2017). We now extended our previous work by additional image manipulations (now 83K instead of 40K psychophysical trials), more recent networks (ResNet instead of AlexNet) plus extensive results for testing generalisation performance of networks trained directly on distortions.
+
 
 ## 16-class-ImageNet
 Contains a `.txt` file with a mapping from all 16 employed entry-level MS COCO categories to the corresponding (fine-grained) ImageNet classes. Further information is provided in the file itself (`MSCOCO_to_ImageNet_category_mapping.txt`).
