@@ -1,6 +1,6 @@
 # Data and materials from <br>"Generalisation in humans and deep neural networks"
 
-This repository contains information, data and materials from the paper "Generalisation in humans and deep neural networks" by Robert Geirhos, Carlos R. Medina Temme, Jonas Rauber, Heiko H. Schütt, Matthias Bethge, and Felix A. Wichmann. We hope that you may find this repository a useful resource for your own research.
+This repository contains information, data and materials from the paper [Generalisation in humans and deep neural networks](https://arxiv.org/abs/1808.08750) by Robert Geirhos, Carlos R. Medina Temme, Jonas Rauber, Heiko H. Schütt, Matthias Bethge, and Felix A. Wichmann. We hope that you may find this repository a useful resource for your own research.
 
 Please don't hesitate to contact me at robert.geirhos@bethgelab.org or open an issue in case there is any question!
 
