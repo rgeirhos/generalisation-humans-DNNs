@@ -13,10 +13,12 @@
 ############################################
 
 # import more specific plotting functions
+source("analysis_helper_functions.R")
 source('plot_accuracy.R')
 source("plot_homing.R")
+source("plot_error_consistency.R")
 source("plot_additional_metric.R")
-source("analysis_helper_functions.R")
+source("plot_confusion_matrix.R")
 
 plot_any_exp = function (exp_name, metric='accuracy', use_sums=TRUE,
                          plot_legend=FALSE, main=NULL, coherence='10', finetuning=FALSE) {
@@ -32,7 +34,7 @@ plot_any_exp = function (exp_name, metric='accuracy', use_sums=TRUE,
   # same for other variables defined below
   exp_name <<- exp_name
   metric <<- metric
-  additional <<- !(metric %in% c('accuracy', 'homing'))
+  additional <<- !(metric %in% c('accuracy', 'homing', 'error_consistency', 'confusion'))
   use_sums <<- (use_sums && !finetuning)
   plot_legend <<- plot_legend
   main <<- main
@@ -133,6 +135,10 @@ plot_any_exp = function (exp_name, metric='accuracy', use_sums=TRUE,
     plot_accuracy()
   } else if (metric == 'homing') {
     plot_homing()
+  } else if (metric == 'error_consistency') {
+    plot_error_consistency()
+  } else if (metric == 'confusion') {
+    plot_confusion_matrix()
   } else {
     plot_additional_metric()
   }

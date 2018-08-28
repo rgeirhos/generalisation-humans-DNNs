@@ -5,6 +5,13 @@
 NETWORKS = sort(c("resnet152", "googlenet", "vgg19"))
 NUM.OVERALL.PARTICIPANTS = 42 # arbitrary but large enough
 
+# assign colors according to University of Tuebingen color scheme 
+resnet152.100 = rgb(125, 165, 75, maxColorValue =  255)
+googlenet.100 = rgb(130, 185, 160, maxColorValue =  255)
+vgg19.100 = rgb(50, 110, 30, maxColorValue =  255)
+human.100 = rgb(165, 30, 55, maxColorValue = 255)
+confusion_0_prec = rgb(235, 235, 235, maxColorValue = 255)
+
 ###################################################################
 #               loading & preprocessing experimental data
 ###################################################################
@@ -28,8 +35,7 @@ get.expt.data = function(expt.name, onlyDNNs=FALSE, onlyHumans=FALSE) {
   files = list.files(expt.path)
   if (onlyDNNs) {
     if (finetuning) {files = list.files(expt.path, "experiment_sixteen01v4|experiment_all-noise|experiment_specialised")}
-    else if (useTF) {files = list.files(expt.path, "experiment_[gvr]")}
-    else {files = list.files(expt.path, "experiment_[gva]")}
+    else {files = list.files(expt.path, "experiment_[gvr]")}
   } else if (onlyHumans) {
     expt.path = paste(datapath, 'humans/', expt.name, sep="")
     files = list.files(expt.path, "experiment_[s]")
@@ -115,19 +121,14 @@ plot.confusion = function(confusion,
                           subject=NULL,
                           is.difference.plot=FALSE,
                           main=NULL,
-                          plot.accuracies=TRUE,
+                          plot.accuracies=FALSE,
                           plot.x.y.labels=TRUE,
                           plot.scale = TRUE,
-                          network.name=NULL) {
+                          network.name=NULL,
+                          plot_categories=FALSE) {
   # Plot confusion matrix
-  
-  if(is.difference.plot) {
-    g = geom_tile(aes(x=category, y=object_response, fill=z),
+  g = geom_tile(aes(x=category, y=object_response, fill=Percent),
                   data=confusion, color="black", size=0.1)
-  } else {
-    g = geom_tile(aes(x=category, y=object_response, fill=Percent),
-                  data=confusion, color="black", size=0.1)
-  }
   
   tile <- ggplot() + g +
     labs(x="presented category",y="response") + 
@@ -145,7 +146,7 @@ plot.confusion = function(confusion,
   }
   
   tile = tile +
-    if((!is.null(confusion$z)) & !is.difference.plot) {
+    if((!is.null(confusion$z))) {
       if(is.null(network.name)) {
         stop("no network name, but confusion$z exists -> which color to use?")
       }
@@ -160,17 +161,13 @@ plot.confusion = function(confusion,
       }
       scale_fill_manual(values = c("0" = rgb(230, 230, 230, maxColorValue = 255),
                                    human.cols, net.cols))
-    } else if(is.difference.plot) {
-      print("plotting difference matrix")
-      scale_fill_manual(values = c("0" = rgb(127, 127, 127, maxColorValue = 255),
-                                   confdiff.human.cols, confdiff.net.cols), guide=FALSE)
     } else {
       if(plot.scale) {
         scale_fill_gradient(low=rgb(250, 250, 250, maxColorValue = 255),
                             high=human.100,
                             limits=c(0,100))
       } else {
-        scale_fill_gradient(low="grey", high=human.100, guide=FALSE, limits=c(0,100))
+        scale_fill_gradient(low=confusion_0_prec, high=human.100, guide=FALSE, limits=c(0,100))
       }
     }
   
@@ -209,87 +206,4 @@ endsWith <- function(argument, match, ignore.case = TRUE) {
   length = nchar(argument)
   
   return(substr(argument, pmax(1, length - n + 1), length) == match)
-}
-
-
-get.z.for.binomial = function(conf, conf1, conf2,
-                              divide.alpha.by) {
-  # Assign values within [-3, 3] indicating the 'significance color'
-  # for a confusion difference plot (here, these color values are called z)
-  #
-  # Parameters:
-  # - conf            -> confusion difference
-  # - conf1           -> human confusion data
-  # - conf2           -> network confusion data
-  # - divide.alpha.by -> if > 1.0, Bonferroni correction will be applied
-  #
-  # z values:
-  # -3 to -1 -> difference significant for alpha = 0.001, 0.01, 0.05; network more frequently
-  # 0        -> no or no significant difference
-  # 3 to 1   -> difference significant for alpha = 0.001, 0.01, 0.05; humans more frequently
-  # These alpha values (0.001, 0.01, 0.05) are subject to a Bonferroni
-  # correction if divide.alpha.by is assigned a value larger than 1.0
-  
-  conf$z = "0" # default value
-  
-  conf1$Freq = as.numeric(conf1$Freq)
-  conf1$CategoryFreq = as.numeric(conf1$CategoryFreq)
-  conf2$Freq = as.numeric(conf2$Freq)
-  conf2$CategoryFreq = as.numeric(conf2$CategoryFreq)
-  
-  for(i in 1:nrow(conf1)) {
-    if(conf1[i, ]$category != conf2[i, ]$category) {
-      stop("category mismatch")
-    }
-    tmp = 0
-    weight = 3
-    for(alpha in sort(c(0.001, 0.01, 0.05), decreasing = F)) {
-      val = is.in.CI(conf2[i, ]$Freq, conf2[i, ]$CategoryFreq,
-                     conf1[i, ]$Freq, conf1[i, ]$CategoryFreq,
-                     conf.level = 1.0-alpha/divide.alpha.by)
-      if(abs(weight*val) > abs(tmp)) {
-        tmp = weight*val
-        break # shortcut: speed up computation and begin with most significant
-      }
-      weight = weight - 1
-    }
-    conf[i, ]$z = as.character(tmp)
-  }
-  return(conf)
-}
-
-
-is.in.CI = function(a.num.successes, a.total,
-                    b.num.successes, b.total,
-                    conf.level,
-                    default.for.p.equals.0 = 0.001) {
-  # In this analysis, is it used as follows:
-  # a: network (in general, reference)
-  # b: human
-  #
-  # Return value will be 1 if b.num.successes / b.total larger than 
-  # the CI's upper bound, -1 if it is smaller, and 0 otherwise
-  # (i.e. if it is contained in the CI, the return value will be 0).
-  
-  p.a = a.num.successes / a.total
-  p.b = b.num.successes / b.total
-  
-  p = ifelse(p.a != 0, ifelse(p.a != 1, p.a, 1-default.for.p.equals.0), default.for.p.equals.0)
-  
-  p.value = binom.test(b.num.successes, b.total,
-                       p = p,
-                       alternative = "two.sided",
-                       conf.level = conf.level)$p.value
-  
-  if(p.value < (1.0 - conf.level)) {
-    if(p.a > p.b) {
-      return(-1)
-    } else if (p.b > p.a) {
-      return(1)
-    } else {
-      stop("this shouldn't occur!")
-    }
-  } else {
-    return(0)
-  }
 }

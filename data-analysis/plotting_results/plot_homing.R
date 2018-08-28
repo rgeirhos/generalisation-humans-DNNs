@@ -22,6 +22,7 @@ plot_homing = function() {
   }
   
   pdf(file=paste(folder_path, exp_name, "_", metric, extension, framework, ".pdf", sep=""),
+  #pdf(file=paste('../../../error_figures/Homing_', exp_name, "_", metric, extension, framework, ".pdf", sep=""),
       width=7.5, 
       height=6.5)
   
@@ -63,38 +64,62 @@ plot_homing = function() {
     else {num_sess <- length(unique(subj_data$session))}
     
     # count occurences of response-category pairs
-    num_responses_by_condition <- aggregate(count ~ condition * object_response, data = subj_data, FUN = sum)
-    num_responses_by_condition <- num_responses_by_condition[num_responses_by_condition$object_response != "na",]
+    if (subject == "humans") {num_responses_by_condition_by_sess <- aggregate(count ~ condition * object_response * subj, data = subj_data, FUN = sum)}
+    else {num_responses_by_condition_by_sess <- aggregate(count ~ condition * object_response * session, data = subj_data, FUN = sum)}
+    num_responses_by_condition_by_sess <- num_responses_by_condition_by_sess[num_responses_by_condition_by_sess$object_response != "na",]
     
-    # count how many times each response was given in a particular condition
-    nr_conds <- length(conds)
-    response_counts = vector(mode = "list", length = nr_conds)
-    names(response_counts) <- conds
-    for (i in 1:nr_conds) {
-      cond = conds[i]
-      cond <- toString(cond)
-      response_counts[[i]] <- num_responses_by_condition[num_responses_by_condition$condition == cond,]
-    }
+    # calculate entropies for each session individually
+    entropies_by_sess <- data.frame()
     
-    # calculate entropy by condition
-    entropy = rep(0, nr_conds)
-    total_nr_trials_per_cond <- num_sess * num_trials / nr_conds
-    for (i in 1:nr_conds) {
-      cond <- toString(conds[i])
-      response_count <- response_counts[[cond]]$count
-      total_nr_responses <- sum(response_count)
-      for (cell in response_count) {
-        prob <- cell / total_nr_responses
-        if (prob != 0) {
-          entropy[i] = entropy[i] - prob * log2(prob)
+    if (subject == "humans") {sessions <- unique(num_responses_by_condition_by_sess$subj)}
+    else {sessions <- unique(num_responses_by_condition_by_sess$session)}
+    
+    for (sess in sessions) {
+      # count how many times each response was given in a particular condition
+      if (subject == "humans") {
+        num_responses_sess <- num_responses_by_condition_by_sess[num_responses_by_condition_by_sess$subj == sess,]
+      }
+      else {
+        num_responses_sess <- num_responses_by_condition_by_sess[num_responses_by_condition_by_sess$session == sess,]
+      }
+      nr_conds <- length(conds)
+      response_counts = vector(mode = "list", length = nr_conds)
+      names(response_counts) <- conds
+      for (i in 1:nr_conds) {
+        cond = conds[i]
+        cond <- toString(cond)
+        response_counts[[i]] <- num_responses_sess[num_responses_sess$condition == cond,]
+      }
+      
+      # calculate entropy by condition
+      entropy = rep(0, nr_conds)
+      for (i in 1:nr_conds) {
+        cond <- toString(conds[i])
+        response_count <- response_counts[[cond]]$count
+        total_nr_responses <- sum(response_count)
+        prob_sum <- 0
+        cnt <- 0
+        for (cell in response_count) {
+          prob <- cell / total_nr_responses
+          prob_sum <- prob_sum + prob
+          cnt <- cnt + 1
+          if (prob != 0) {
+            entropy[i] = entropy[i] - prob * log2(prob)
+          }
         }
+        new_row <- list(sess, cond, entropy[i])
+        names(new_row) <- list("session", "condition", "entropy")
+        entropies_by_sess <- rbind(entropies_by_sess, new_row)
+        levels(entropies_by_sess$session) <- sessions
+        levels(entropies_by_sess$condition) <- conds
       }
     }
+    mean_entropies <- aggregate(entropy ~ condition, data = entropies_by_sess, FUN = mean)
     
     # get point coordinates to plot
     # plot data points (first get there coordinates)
     x_coords = x_values
-    y_coords = entropy
+    y_coords = mean_entropies$entropy
     if (separate_left) {
       x_coords = x_coords[2:length(x_values)]
       y_coords = y_coords[2:length(x_values)]
@@ -104,19 +129,67 @@ plot_homing = function() {
     } 
     
     print(subject)
-    print(entropy)
+    print(mean_entropies$entropy)
     
     # plot points
     points(x_coords, y_coords, type = "b", pch = point_types[[subject]], lwd = line_width,
            col = plot_colours[[subject]], lty = 1, cex = point_sizes[subject])
     
+    # draw errorbars
+    # calculate standard deviation / standard error of the mean / response range
+    # then get y coordinates for error bars
+    if (subject == "humans") {n <- length(unique(entropies_by_sess$subj))}
+    else {n <- length(unique(entropies_by_sess$session))}
+    stds <- aggregate(entropy ~ condition, data = entropies_by_sess, FUN = sd)
+    #stds <- stds[rank(conds),]        
+    sem <- stds$entropy / sqrt(n)
+    sem <- sem[rank(conds)]         
+    if (error_bars == "SD") {
+      errors <- stds$entropy
+      y0 <- mean_entropies$entropy - errors
+      y1 <- mean_entropies$entropy + errors
+    }
+    if (error_bars == "SE") {
+      errors <- sem
+      y0 <- mean_entropies$entropy - errors
+      y1 <- mean_entropies$entropy + errors
+    }
+    if (error_bars == "range") {
+      y0 <- aggregate(entropy ~ condition, data = entropies_by_sess, FUN = min)$entropy
+      #y0 <- y0[rank(conds)]       
+      y1 <- aggregate(entropy ~ condition, data = entropies_by_sess, FUN = max)$entropy
+      #y1 <- y1[rank(conds)]         
+    }
+    
+    # plot error bars
+    # hack: we draw arrows but with very special "arrowheads"
+    if (separate_left) {
+      arrows(x0=x_coords, y0=y0[2:length(x_values)],
+             x1=x_coords, y1=y1[2:length(x_values)],
+             length=0.025, angle=90, code=3,
+             col=plot_colours[[subject]],
+             lwd = line_width)
+    } else if (separate_right) {
+      arrows(x0=x_coords, y0=y0[1:length(x_values)-1],
+             x1=x_coords, y1=y1[1:length(x_values)-1],
+             length=0.025, angle=90, code=3,
+             col=plot_colours[[subject]],
+             lwd = line_width)
+    } else {
+      arrows(x0=x_coords, y0=y0,
+             x1=x_coords, y1=y1,
+             length=0.025, angle=90, code=3,
+             col=plot_colours[[subject]],
+             lwd = line_width)
+    }
+    
     # plotting separated points
     if (separate_left) {
-      points(x_values[1], entropy[1], type = "b", 
+      points(x_values[1], mean_entropies$entropy[1], type = "b", 
              pch = point_types[[subject]], lwd = line_width,           
              col = plot_colours[[subject]], cex = point_sizes[subject])
     } else if (separate_right) {
-      points(x_values[length(x_values)], entropy[length(x_values)], type = "b", 
+      points(x_values[length(x_values)], mean_entropies$entropy[length(x_values)], type = "b", 
              pch = point_types[[subject]], lwd = line_width,         
              col = plot_colours[[subject]], cex = point_sizes[subject])
     }
