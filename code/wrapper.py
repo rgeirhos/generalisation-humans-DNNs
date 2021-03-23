@@ -25,6 +25,9 @@ import numpy as np
 import os
 from skimage.io import imsave
 
+import sys
+sys.path.append("../../eidolon")
+
 # you'll need to include the eidolon/ directory of the Eidolon
 # toolbox for these imports to work. See above for information on
 # how to obtain this.
