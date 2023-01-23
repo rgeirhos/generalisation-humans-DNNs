@@ -143,7 +143,7 @@ def high_pass_filter(image, std):
     image = rgb2grey(image)
     new_image = np.zeros(image.shape, image.dtype)
 
-    # aplly the gaussian filter and subtract from the original image
+    # apply the gaussian filter and subtract from the original image
     gauss_filter = gaussian_filter(image, std, mode ='constant', cval=bg_grey)
     new_image = image - gauss_filter
 
@@ -160,7 +160,7 @@ def high_pass_filter(image, std):
 
 
 def low_pass_filter(image, std):
-    """Aplly a Gaussian low-pass filter to an image.
+    """Apply a Gaussian low-pass filter to an image.
     
     parameters:
     - image: a numpy.ndarray
@@ -173,7 +173,7 @@ def low_pass_filter(image, std):
     image = rgb2grey(image)
     new_image = np.zeros(image.shape, image.dtype)
 
-    # aplly Gaussian low-pass filter
+    # apply Gaussian low-pass filter
     new_image = gaussian_filter(image, std, mode ='constant', cval=bg_grey)
 
     # crop too small and too large values
