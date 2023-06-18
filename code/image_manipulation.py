@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-from skimage.color import rgb2gray, rgb2grey
-from scipy.ndimage.filters import gaussian_filter
+from skimage.color import rgb2gray
+from scipy.ndimage import gaussian_filter
 from scipy import fftpack as fp
-from skimage.io import imread, imsave
-from scipy.misc import toimage
+from skimage.io import imread
+from PIL import Image
 import numpy as np
-import sys
 
 ###########################################################
 #   IMAGE IO
@@ -20,12 +19,11 @@ def imload_rgb(path):
 
 def save_img(image, imgname, use_JPEG=False):
     """Save image as either .jpeg or .png"""
+    format = "JPEG" if use_JPEG else 'PNG'
 
-    if use_JPEG:
-        imsave(imgname+".JPEG", image) 
-    else:
-        toimage(image,
-                cmin=0.0, cmax=1.0).save(imgname+".png")
+    image = image * 255.0
+    image = image.astype("uint8")
+    Image.fromarray(image).save(imgname + "." + format, format)
 
 
 ###########################################################
@@ -140,7 +138,7 @@ def high_pass_filter(image, std):
     bg_grey = 0.4423
     
     # convert image to greyscale and define variable prepare new image
-    image = rgb2grey(image)
+    image = rgb2gray(image)
     new_image = np.zeros(image.shape, image.dtype)
 
     # apply the gaussian filter and subtract from the original image
@@ -170,7 +168,7 @@ def low_pass_filter(image, std):
     bg_grey = 0.4423
     
     # covert image to greyscale and define variable prepare new image
-    image = rgb2grey(image)
+    image = rgb2gray(image)
     new_image = np.zeros(image.shape, image.dtype)
 
     # apply Gaussian low-pass filter
@@ -210,7 +208,7 @@ def rotate90(image):
     parameters:
     - image: a numpy.ndarray"""
     
-    grey_channel = rgb2grey(image)
+    grey_channel = rgb2gray(image)
     new_channel = np.transpose(grey_channel, axes=(1,0))[::-1,:]
     return np.dstack((new_channel,new_channel,new_channel))
 
@@ -220,7 +218,7 @@ def rotate180(image):
     parameters:
     - image: a numpy.ndarray"""
     
-    grey_channel = rgb2grey(image)
+    grey_channel = rgb2gray(image)
     new_channel = grey_channel[::-1,::-1]
     return np.dstack((new_channel,new_channel,new_channel))
 
@@ -230,7 +228,7 @@ def rotate270(image):
     parameters:
     - image: a numpy.ndarray"""
     
-    grey_channel = rgb2grey(image)
+    grey_channel = rgb2gray(image)
     new_channel = np.transpose(grey_channel[::-1,:], axes=(1,0))
     return np.dstack((new_channel,new_channel,new_channel))
 
@@ -409,7 +407,7 @@ def scramble_phases(image, width):
     phase_shifts = phase_shifts * 2 * width/180 * np.pi
     
     # convert to graysclae
-    channel = rgb2grey(image)
+    channel = rgb2gray(image)
 
     # Fourier Forward Tranform and shift to centre
     f = fp.fft2(channel) #rfft for real values
@@ -480,7 +478,7 @@ def equalise_power_spectrum(image, avg_power_spectrum):
             avg_spectrum shape={}'.format(image.shape[:2], avg_power_spectrum.shape)
 
     # convert image to greysclae
-    channel = rgb2grey(image)
+    channel = rgb2gray(image)
 
     # Fourier Forward Tranform and shift to centre
     f = fp.fft2(channel)
