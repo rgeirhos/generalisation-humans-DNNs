@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from typing import Optional
-
 #------------------------------------------------#
 #    THIS FILE HAS NOT BEEN TESTED!              #
 #------------------------------------------------#
