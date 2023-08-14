@@ -50,7 +50,9 @@ def data_to_pic(dat, sz=SZ, min_s=MIN_STD, max_s=MAX_STD, s_factor=STD_FAC):
 
     (outfd, fname) = mkstemp('.png')
 
-    imsave(fname, dat)
+    image = dat * 255.0
+    image = image.astype("uint8")
+    Image.fromarray(image).save(fname)
 
     # close temp file, otherwise one gets complaints about
     # too many open files
